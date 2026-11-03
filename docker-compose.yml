@@ -1,0 +1,28 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: evergreen-postgres
+    environment:
+      POSTGRES_DB: evergreen
+      POSTGRES_USER: evergreen
+      POSTGRES_PASSWORD: evergreen-local-only
+    ports: ["5432:5432"]
+    volumes: ["evergreen_pg:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U evergreen -d evergreen"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  app:
+    build: .
+    container_name: evergreen-app
+    depends_on:
+      postgres: { condition: service_healthy }
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Default: Host=postgres;Port=5432;Database=evergreen;Username=evergreen;Password=evergreen-local-only
+      Jwt__Key: LOCAL-ONLY-CHANGE-THIS-KEY-AT-LEAST-32-CHARS
+    ports: ["5080:8080"]
+volumes:
+  evergreen_pg:
